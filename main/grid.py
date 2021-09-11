@@ -2,7 +2,7 @@ import numpy as np
 import cupy as cp
 import basis as b
 import scipy.special as sp
-
+import matplotlib.pyplot as plt
 
 class SpaceGrid:
     def __init__(self, low, high, elements, order):
@@ -35,6 +35,7 @@ class SpaceGrid:
         self.wavenumbers = self.fundamental * np.arange(1 - self.cutoff, self.cutoff)
         self.device_wavenumbers = cp.asarray(self.wavenumbers)
         self.grid_phases = cp.tensordot(self.device_wavenumbers, self.device_arr, axes=0)
+        self.grid_modes = cp.exp(1j * self.grid_phases)
         self.build_transform_matrix()
 
     def create_grid(self):
@@ -58,10 +59,12 @@ class SpaceGrid:
         )
 
     def fourier_transform(self, function, idx):
+        # print(function.shape)
+        # print(self.transform_matrix.shape)
         return cp.tensordot(self.transform_matrix, function, axes=([1, 2], idx))
 
     def inverse_fourier_transform(self, spectrum, idx):
-        return cp.tensordot(spectrum, self.grid_phases, axes=(idx, [0]))
+        return cp.tensordot(spectrum, self.grid_modes, axes=(idx, [0]))
 
 
 class VelocityGrid:
@@ -90,11 +93,16 @@ class VelocityGrid:
 
         # spectral properties
         self.transform_matrix = None
-        self.cutoff = self.elements + 1
+        self.cutoff = 3 * self.elements + 1
         self.modes = np.arange(self.cutoff)
+        self.device_modes = cp.asarray(self.modes)
         self.upper_grid_modes = cp.array([upper_hermite(n, self.arr) for n in range(self.cutoff)])
         self.lower_grid_modes = cp.array([lower_hermite(n, self.arr) for n in range(self.cutoff)])
         self.build_transform_matrix()
+        # plt.figure()
+        # for i in range(self.cutoff):
+        #     plt.plot(self.arr.flatten(), self.lower_grid_modes[i, :, :].get().flatten(), 'o')
+        # plt.show()
 
     def create_grid(self):
         """ Build global grid """
@@ -141,8 +149,8 @@ class PhaseSpace:
 
 
 def lower_hermite(n, arr):
-    return sp.hermite(n)(arr) * np.exp(-arr ** 2.0) / np.sqrt((2.0 ** n) * np.pi * np.math.factorial(n))
+    return sp.hermite(n, monic=False)(arr) * np.exp(-arr ** 2.0) / np.sqrt((2.0 ** n) * np.pi * np.math.factorial(n))
 
 
 def upper_hermite(n, arr):
-    return sp.hermite(n)(arr) / np.sqrt((2.0 ** n) * np.math.factorial(n))
+    return sp.hermite(n, monic=False)(arr) / np.sqrt((2.0 ** n) * np.math.factorial(n))

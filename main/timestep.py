@@ -1,6 +1,7 @@
 import numpy as np
-import cupy as cp
+# import cupy as cp
 import variables as var
+import time as timer
 
 
 # Courant numbers for RK-DG stability from Cockburn and Shu 2001, [time_order][space_order-1]
@@ -33,15 +34,35 @@ class Stepper:
 
         # Simulation time init
         self.time = 0
-        self.dt = None
+        self.dt = 5.0e-4  # None
         self.steps_counter = 0
         self.write_counter = 1  # IC already written
 
-    def main_loop(self, distribution, grid, elliptic, semi_discrete):
+        # Stored array
+        self.saved_times = []
+        self.saved_array = []
 
+    def main_loop(self, distribution, grid, elliptic, semi_discrete):
+        t0 = timer.time()
+        print('\nBeginning main loop')
+        self.saved_times += [self.time]
+        self.saved_array += [distribution.zero_moment.arr_nodal]
         while self.time < self.final_time:
             self.nonlinear_ssp_rk(distribution=distribution, grid=grid, elliptic=elliptic,
                                   semi_discrete=semi_discrete)
+            # Update time and steps counter
+            self.time += self.dt
+            self.steps_counter += 1
+            if self.time > self.write_counter * self.write_time:
+                print('\nI made it through step ' + str(self.steps_counter))
+                self.write_counter += 1
+                distribution.zero_moment.inverse_fourier_transform(grid=grid)
+                self.saved_times += [self.time]
+                self.saved_array += [distribution.zero_moment.arr_nodal]
+                print('The simulation time is {:0.3e}'.format(self.time))
+                print('The time-step is {:0.3e}'.format(self.dt))
+                print('Time since start is ' + str((timer.time() - t0) / 60.0) + ' minutes')
+        print('\nAll done, total steps was ' + str(self.steps_counter))
 
     def nonlinear_ssp_rk(self, distribution, grid, elliptic, semi_discrete):
         # Set up stages
@@ -58,7 +79,7 @@ class Stepper:
 
         # first stage
         elliptic.poisson_solve(distribution=stage0, grid=grid, invert=False)
-        semi_discrete.spectral_rhs(distribution=distribution,
+        semi_discrete.spectral_rhs(distribution=stage0,
                                    grid=grid, elliptic=elliptic)
         stage1.arr_spectral = (self.rk_coefficients[0, 0] * distribution.arr_spectral +
                                self.rk_coefficients[0, 1] * stage0.arr_spectral +
@@ -66,6 +87,8 @@ class Stepper:
 
         # second stage, update
         elliptic.poisson_solve(distribution=stage1, grid=grid, invert=False)
+        semi_discrete.spectral_rhs(distribution=stage1,
+                                   grid=grid, elliptic=elliptic)
         distribution.arr_spectral = (self.rk_coefficients[1, 0] * distribution.arr_spectral +
                                      self.rk_coefficients[1, 1] * stage1.arr_spectral +
                                      self.rk_coefficients[1, 2] * self.dt * semi_discrete.rhs)

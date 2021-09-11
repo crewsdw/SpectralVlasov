@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 class Plotter:
     def __init__(self, grid, colormap='RdPu'):
         self.colormap = colormap
-        # order = grid.x.order
+        self.grid = grid
         # Build structured grid
         self.X, self.V = np.meshgrid(grid.x.arr.flatten(), grid.v.arr.flatten(), indexing='ij')
         self.x = grid.x.arr
@@ -21,12 +21,22 @@ class Plotter:
         plt.xlabel('x'), plt.ylabel('v')
         plt.colorbar(), plt.tight_layout()
 
-    def spatial_scalar_plot(self, scalar):
+    def spatial_scalar_plot(self, scalar, y_axis):
         # cb = cp.linspace(cp.amin(scalar.arr_nodal), cp.amax(scalar.arr_nodal), num=100).get()
+        if scalar.arr_nodal is None:
+            scalar.inverse_fourier_transform(grid=self.grid)
 
         plt.figure()
-        plt.plot(self.x, scalar.arr_nodal.get(), 'o')
-        plt.xlabel('x'), plt.ylabel('scalar')
+        plt.plot(self.x.flatten(), scalar.arr_nodal.get().flatten(), 'o')
+        plt.xlabel('x'), plt.ylabel(y_axis)
+        plt.tight_layout()
+
+    def plot_saved_scalars(self, saved_array):
+        plt.figure()
+        for i in range(len(saved_array)):
+            plt.plot(self.x.flatten(), saved_array[i].get().flatten(), 'o')
+        plt.xlabel('x'), plt.ylabel('n')
+        plt.title('Plot of saved scalar arrays')
         plt.tight_layout()
 
     def show_all(self):

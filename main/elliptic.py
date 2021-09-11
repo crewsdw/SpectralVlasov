@@ -7,6 +7,7 @@ class Elliptic:
         # init potential
         self.potential = var.Scalar1D(resolution=elements[0], order=orders[0])
         self.field = var.Scalar1D(resolution=elements[0], order=orders[0])
+        # self.field_spectrum = None
 
     def poisson_solve(self, distribution, grid, invert=True):
         """ Solve Poisson equation for electric potential """
