@@ -11,8 +11,8 @@ import plotter as my_plt
 import matplotlib.pyplot as plt
 
 # elements and order
-elements, orders = [16, 16], [10, 10]
-final_time, write_time = 6.0e0, 1.0e-1
+elements, orders = [64, 64], [10, 10]
+final_time, write_time = 2 * np.pi, 1.0e-1
 
 # Set up phase space grid
 lows = np.array([-np.pi, -6.0])
@@ -25,18 +25,18 @@ distribution.initialize(grid=grid)
 distribution.fourier_hermite_transform(grid=grid)
 distribution.invert_fourier_hermite_transform(grid=grid)
 distribution.zero_moment_spectral(grid=grid)
-
-# Look at Fourier-Hermite spectrum
-plt.figure()
-for i in range(distribution.arr_spectral.shape[0]):
-    plt.plot(grid.v.modes, np.imag(distribution.arr_spectral[i, :].get()), 'o')
-plt.title('imag')
-
-plt.figure()
-for i in range(distribution.arr_spectral.shape[0]):
-    plt.plot(grid.v.modes, np.real(distribution.arr_spectral[i, :].get()), 'o')
-plt.title('real')
-plt.show()
+#
+# # Look at Fourier-Hermite spectrum
+# plt.figure()
+# for i in range(distribution.arr_spectral.shape[0]):
+#     plt.plot(grid.v.modes, np.imag(distribution.arr_spectral[i, :].get()), 'o')
+# plt.title('imag')
+#
+# plt.figure()
+# for i in range(distribution.arr_spectral.shape[0]):
+#     plt.plot(grid.v.modes, np.real(distribution.arr_spectral[i, :].get()), 'o')
+# plt.title('real')
+# plt.show()
 
 # Set up elliptic solver
 elliptic = ell.Elliptic(elements=elements, orders=orders)
@@ -47,6 +47,7 @@ plotter = my_plt.Plotter(grid=grid)
 plotter.phasespace_scalar_contourf(ps_scalar=distribution)
 plotter.spatial_scalar_plot(scalar=distribution.zero_moment, y_axis='n')
 plotter.spatial_scalar_plot(scalar=elliptic.potential, y_axis='phi')
+plotter.plot_fourier_hermite_spectrum(ps_scalar=distribution)
 plotter.show_all()
 
 # Set up semi-discrete
@@ -58,16 +59,16 @@ stepper.main_loop(distribution=distribution, grid=grid, elliptic=elliptic, semi_
 
 
 # Look at Fourier-Hermite spectrum
-plt.figure()
-for i in range(distribution.arr_spectral.shape[0]):
-    plt.plot(grid.v.modes, np.imag(distribution.arr_spectral[i, :].get()), 'o')
-plt.title('imag')
-
-plt.figure()
-for i in range(distribution.arr_spectral.shape[0]):
-    plt.plot(grid.v.modes, np.real(distribution.arr_spectral[i, :].get()), 'o')
-plt.title('real')
-plt.show()
+# plt.figure()
+# for i in range(distribution.arr_spectral.shape[0]):
+#     plt.plot(grid.v.modes, np.imag(distribution.arr_spectral[i, :].get()), 'o')
+# plt.title('imag')
+#
+# plt.figure()
+# for i in range(distribution.arr_spectral.shape[0]):
+#     plt.plot(grid.v.modes, np.real(distribution.arr_spectral[i, :].get()), 'o')
+# plt.title('real')
+# plt.show()
 
 # Look at final state
 distribution.invert_fourier_hermite_transform(grid=grid)
@@ -78,5 +79,6 @@ plotter.phasespace_scalar_contourf(ps_scalar=distribution)
 plotter.spatial_scalar_plot(scalar=distribution.zero_moment, y_axis='n')
 plotter.spatial_scalar_plot(scalar=elliptic.potential, y_axis='phi')
 plotter.plot_saved_scalars(saved_array=stepper.saved_array)
+plotter.plot_fourier_hermite_spectrum(ps_scalar=distribution)
 
 plotter.show_all()

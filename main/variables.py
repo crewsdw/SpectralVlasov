@@ -31,10 +31,11 @@ class PhaseSpaceScalar:
 
     def initialize(self, grid):
         ix, iv = cp.ones_like(grid.x.device_arr), cp.ones_like(grid.v.device_arr)
-        pert = 1.0 + 0.2 * cp.sin(grid.x.fundamental * grid.x.device_arr)
+        pert = 1.0 + 0.1 * cp.sin(grid.x.fundamental * grid.x.device_arr)
         factor = 1.0 / (np.sqrt(np.pi)) * cp.tensordot(pert, iv, axes=0)
-        vsq = cp.tensordot(ix, cp.power(grid.v.device_arr, 2.0), axes=0)
-        gauss = cp.exp(-vsq)
+        vsq1 = cp.tensordot(ix, cp.power((grid.v.device_arr-2.0), 2.0), axes=0)
+        vsq2 = cp.tensordot(ix, cp.power((grid.v.device_arr+2.0), 2.0), axes=0)
+        gauss = 0.5 * cp.exp(-vsq1) + 0.5 * cp.exp(-vsq2)
         self.arr_nodal = cp.multiply(factor, gauss)  # + perturbation
 
     def zero_moment_spectral(self, grid):
@@ -64,10 +65,10 @@ class PhaseSpaceScalar:
 
     def hermite_derivative(self, grid):
         """ Computes the term df/dv using Hermite recurrence """
-        return cp.multiply(cp.sqrt(2.0 * (grid.v.device_modes))[None, :],
+        return cp.multiply(cp.sqrt(2.0 * grid.v.device_modes)[None, :],
                            cp.roll(self.padded_spectrum, shift=+1, axis=1)[:, 1:-1])
-        # return cp.multiply(cp.sqrt(2.0 * grid.v.device_modes)[None, :],
-        #                    cp.roll(self.padded_spectrum, shift=+1, axis=1)[:, 1:-1])
+        # return cp.multiply(cp.sqrt(2.0 * (grid.v.device_modes+1))[None, :],
+        #                    cp.roll(self.padded_spectrum, shift=-1, axis=1)[:, 1:-1])
 
     def grid_flatten(self):
         return self.arr_nodal.reshape((self.x_res * self.x_ord,

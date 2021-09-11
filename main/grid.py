@@ -4,6 +4,7 @@ import basis as b
 import scipy.special as sp
 import matplotlib.pyplot as plt
 
+
 class SpaceGrid:
     def __init__(self, low, high, elements, order):
         # grid limits and elements
@@ -30,7 +31,7 @@ class SpaceGrid:
 
         # spectral properties
         self.transform_matrix = None
-        self.cutoff = self.elements + 1
+        self.cutoff = 10  # self.elements + 1
         self.fundamental = 2.0 * np.pi / self.length
         self.wavenumbers = self.fundamental * np.arange(1 - self.cutoff, self.cutoff)
         self.device_wavenumbers = cp.asarray(self.wavenumbers)
@@ -93,11 +94,15 @@ class VelocityGrid:
 
         # spectral properties
         self.transform_matrix = None
-        self.cutoff = 2 * self.elements + 1
+        self.cutoff = 150  # 4 * elements + 1
         self.modes = np.arange(self.cutoff)
         self.device_modes = cp.asarray(self.modes)
-        self.upper_grid_modes = cp.array([upper_hermite(n, self.arr) for n in range(self.cutoff)])
-        self.lower_grid_modes = cp.array([lower_hermite(n, self.arr) for n in range(self.cutoff)])
+        self.upper_grid_modes = cp.asarray(
+            np.array([upper_hermite(n, self.arr) for n in range(self.cutoff)])
+        )
+        self.lower_grid_modes = cp.asarray(
+            np.array([lower_hermite(n, self.arr) for n in range(self.cutoff)])
+        )
         self.build_transform_matrix()
         # plt.figure()
         # for i in range(self.cutoff):
@@ -149,7 +154,8 @@ class PhaseSpace:
 
 
 def lower_hermite(n, arr):
-    return sp.hermite(n, monic=False)(arr) * np.exp(-arr ** 2.0) / np.sqrt((2.0 ** n) * np.pi * np.math.factorial(n))
+    return sp.hermite(n, monic=False)(arr) * np.exp(-arr ** 2.0) / \
+           np.sqrt((2.0 ** n) * np.pi * np.math.factorial(n))
 
 
 def upper_hermite(n, arr):

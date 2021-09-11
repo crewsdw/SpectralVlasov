@@ -23,15 +23,5 @@ class Spectral:
         v_translation = grid.fourier_hermite_transform(
             function=edfdv
         )
-        # plotter = my_plt.Plotter(grid=grid)
-        # plt.figure()
-        # plt.plot(grid.x.arr.flatten(), elliptic.field.arr_nodal.get().flatten(), 'o')
-        # plt.tight_layout()
-        #
-        # plt.figure()
-        # plt.contourf(plotter.X, plotter.V, edfdv.get().reshape((grid.x.elements * grid.x.order,
-        #                                                         grid.v.elements * grid.v.order)))
-        # plt.colorbar(), plt.tight_layout()
-        # plt.show()
 
-        self.rhs = x_translation + v_translation
+        self.rhs = x_translation + 2.0 * v_translation
