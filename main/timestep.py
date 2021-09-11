@@ -30,11 +30,11 @@ class Stepper:
         self.write_time, self.final_time = write_time, final_time
         # RK numbers
         self.rk_coefficients = np.array(nonlinear_ssp_rk_switch.get(self.time_order, "nothing"))
-        self.courant = courant_numbers.get(self.time_order)[self.space_order - 1]
+        # self.courant = courant_numbers.get(self.time_order)[self.space_order - 1]
 
         # Simulation time init
         self.time = 0
-        self.dt = 5.0e-4  # None
+        self.dt = 1.0e-3  # None
         self.steps_counter = 0
         self.write_counter = 1  # IC already written
 

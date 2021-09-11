@@ -24,6 +24,9 @@ class Elliptic:
 
     def compute_field(self, grid):
         # Compute electric field
-        self.field.arr_nodal = grid.inverse_fourier_transform(
-            spectrum=cp.multiply(-1j * grid.x.device_wavenumbers, self.potential.arr_spectral)
-        )
+        self.field.arr_nodal = cp.real(grid.x.inverse_fourier_transform(
+            spectrum=cp.multiply(-1j * grid.x.device_wavenumbers, self.potential.arr_spectral),
+            idx=[0]
+        ))
+        # print(self.field.arr_nodal.shape)
+        # quit()

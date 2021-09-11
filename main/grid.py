@@ -93,7 +93,7 @@ class VelocityGrid:
 
         # spectral properties
         self.transform_matrix = None
-        self.cutoff = 3 * self.elements + 1
+        self.cutoff = 2 * self.elements + 1
         self.modes = np.arange(self.cutoff)
         self.device_modes = cp.asarray(self.modes)
         self.upper_grid_modes = cp.array([upper_hermite(n, self.arr) for n in range(self.cutoff)])
@@ -143,9 +143,9 @@ class PhaseSpace:
                 function=function, idx=[0, 1]), idx=[1, 2]).transpose()
 
     def invert_fourier_hermite_transform(self, spectrum):
-        return self.x.inverse_fourier_transform(
+        return cp.real(self.x.inverse_fourier_transform(
             spectrum=self.v.inverse_hermite_transform(
-                spectrum=spectrum, idx=[1]), idx=[0]).transpose((2, 3, 0, 1))
+                spectrum=spectrum, idx=[1]), idx=[0]).transpose((2, 3, 0, 1)))
 
 
 def lower_hermite(n, arr):

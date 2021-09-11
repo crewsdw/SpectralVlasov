@@ -64,8 +64,8 @@ class PhaseSpaceScalar:
 
     def hermite_derivative(self, grid):
         """ Computes the term df/dv using Hermite recurrence """
-        return cp.multiply(cp.sqrt(2.0 * (grid.v.device_modes+1))[None, :],
-                           cp.roll(self.padded_spectrum, shift=-1, axis=1)[:, 1:-1])
+        return cp.multiply(cp.sqrt(2.0 * (grid.v.device_modes))[None, :],
+                           cp.roll(self.padded_spectrum, shift=+1, axis=1)[:, 1:-1])
         # return cp.multiply(cp.sqrt(2.0 * grid.v.device_modes)[None, :],
         #                    cp.roll(self.padded_spectrum, shift=+1, axis=1)[:, 1:-1])
 
