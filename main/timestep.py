@@ -48,8 +48,13 @@ class Stepper:
         self.saved_times += [self.time]
         self.saved_array += [distribution.zero_moment.arr_nodal]
         while self.time < self.final_time:
+            # Take step
             self.nonlinear_ssp_rk(distribution=distribution, grid=grid, elliptic=elliptic,
                                   semi_discrete=semi_discrete)
+            # Update basis
+            distribution.invert_fourier_hermite_transform(grid=grid)
+            distribution.recompute_hermite_basis(grid=grid)
+            distribution.fourier_hermite_transform(grid=grid)
             # Update time and steps counter
             self.time += self.dt
             self.steps_counter += 1
@@ -59,6 +64,7 @@ class Stepper:
                 distribution.zero_moment.inverse_fourier_transform(grid=grid)
                 self.saved_times += [self.time]
                 self.saved_array += [distribution.zero_moment.arr_nodal]
+                print(grid.v.alpha)
                 print('The simulation time is {:0.3e}'.format(self.time))
                 print('The time-step is {:0.3e}'.format(self.dt))
                 print('Time since start is ' + str((timer.time() - t0) / 60.0) + ' minutes')

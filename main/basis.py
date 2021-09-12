@@ -1,4 +1,5 @@
 import numpy as np
+import cupy as cp
 import scipy.special as sp
 
 # Gauss-Legendre nodes and weights
@@ -55,6 +56,7 @@ class Basis1D:
         self.order = int(order)
         self.nodes = np.array(gl_nodes.get(self.order, "nothing"))
         self.weights = np.array(gl_weights.get(self.order, "nothing"))
+        self.device_weights = cp.asarray(self.weights)
 
         # vandermonde matrix and inverse
         self.eigenvalues = self.set_eigenvalues()
@@ -73,23 +75,3 @@ class Basis1D:
         return np.array([[self.weights[j] * self.eigenvalues[s] * sp.legendre(s)(self.nodes[j])
                           for j in range(self.order)]
                          for s in range(self.order)])
-
-    # def interpolate_values(self, grid, arr):
-    #     """ Determine interpolated values on any grid ("arr_fine") using the polynomial basis"""
-    #     # Compute affine transformation per-element to isoparametric element
-    #     xi = grid.J * (grid.arr_fine[1:-1, :] - grid.midpoints[:, None])
-    #     # Legendre polynomials at transformed points
-    #     ps = np.array([sp.legendre(s)(xi) for s in range(self.order)])
-    #     # Interpolation polynomials at fine points
-    #     ell = np.transpose(np.tensordot(self.inv_vandermonde, ps, axes=([0], [0])), [1, 0, 2])
-    #     # Compute interpolated values
-    #     return np.multiply(ell, arr[:, :, None]).sum(axis=1)
-
-    # def fourier_quad(self, grid, wavenumbers, J):
-    #     """
-    #     Build connection coefficients, local Legendre -> global Fourier
-    #     """
-    #     # transform of interpolant
-    #     # interpolant_transform = np.multiply(np.array(self.weights)[:, None],
-    #                                         np.exp(-1j * np.tensordot(self.nodes, wavenumbers, axes=0) / J))
-    #

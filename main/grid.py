@@ -31,7 +31,7 @@ class SpaceGrid:
 
         # spectral properties
         self.transform_matrix = None
-        self.cutoff = 30  # self.elements + 1
+        self.cutoff = 15  # self.elements + 1
         self.fundamental = 2.0 * np.pi / self.length
         self.wavenumbers = self.fundamental * np.arange(1 - self.cutoff, self.cutoff)
         self.device_wavenumbers = cp.asarray(self.wavenumbers)
@@ -60,8 +60,6 @@ class SpaceGrid:
         )
 
     def fourier_transform(self, function, idx):
-        # print(function.shape)
-        # print(self.transform_matrix.shape)
         return cp.tensordot(self.transform_matrix, function, axes=([1, 2], idx))
 
     def inverse_fourier_transform(self, spectrum, idx):
@@ -94,16 +92,13 @@ class VelocityGrid:
 
         # spectral properties
         self.transform_matrix = None
-        self.cutoff = 90  # 4 * elements + 1
+        self.cutoff = 100  # 4 * elements + 1
         self.modes = np.arange(self.cutoff)
         self.device_modes = cp.asarray(self.modes)
-        self.upper_grid_modes = cp.asarray(
-            np.array([upper_hermite(n, self.arr, alpha=alpha) for n in range(self.cutoff)])
-        )
-        self.lower_grid_modes = cp.asarray(
-            np.array([lower_hermite(n, self.arr, alpha=alpha) for n in range(self.cutoff)])
-        )
-        self.build_transform_matrix()
+        # compute initial grid modes
+        self.upper_grid_modes, self.lower_grid_modes = None, None
+        self.alpha = alpha
+        self.compute_hermite_basis(first_moment=0, centered_second_moment=self.alpha)
         # plt.figure()
         # for i in range(self.cutoff):
         #     plt.plot(self.arr.flatten(), self.lower_grid_modes[i, :, :].get().flatten(), 'o')
@@ -122,18 +117,43 @@ class VelocityGrid:
         # send to device
         self.device_arr = cp.asarray(self.arr)
 
-    def build_transform_matrix(self):
-        """ Build transform matrix, local galerkin -> global fourier """
-        self.transform_matrix = cp.asarray(
-            np.multiply(self.local_basis.weights[None, None, :],
-                        self.upper_grid_modes.get()) / self.J
-        )
+    def zero_moment(self, function, idx):
+        return cp.tensordot(self.global_quads, function, axes=([0, 1], idx)) / self.J
+
+    def first_moment(self, function, idx):
+        """ Take first moment, <f> """
+        return cp.tensordot(cp.multiply(self.local_basis.device_weights[None, :], self.device_arr),
+                            function, axes=([0, 1], idx)) / self.J
+
+    def shifted_second_moment(self, function, shift, idx):
+        """ Take second moment about a shifted zero-point """
+        return cp.tensordot(cp.multiply(self.local_basis.device_weights[None, :], cp.square(self.device_arr - shift)),
+                            function, axes=([0, 1], idx)) / self.J
 
     def hermite_transform(self, function, idx):
         return cp.tensordot(self.transform_matrix, function, axes=([1, 2], idx))
 
     def inverse_hermite_transform(self, spectrum, idx):
         return cp.tensordot(spectrum, self.lower_grid_modes, axes=(idx, [0]))
+
+    def compute_hermite_basis(self, first_moment, centered_second_moment):
+        """ Calculate the hermite basis again using the shifted/scaled variable z = (v - <v>)/alpha """
+        self.alpha = np.sqrt(2.0) * centered_second_moment
+        # print(centered_second_moment)
+        self.upper_grid_modes = cp.asarray(
+            np.array([upper_hermite(n, self.arr / self.alpha) for n in range(self.cutoff)])
+        )
+        self.lower_grid_modes = cp.asarray(
+            np.array([lower_hermite(n, self.arr / self.alpha) for n in range(self.cutoff)])
+        )
+        self.build_transform_matrix()
+
+    def build_transform_matrix(self):
+        """ Build transform matrix, local galerkin -> global fourier """
+        self.transform_matrix = cp.multiply(
+            self.local_basis.device_weights[None, None, :],
+            self.upper_grid_modes
+        ) / cp.array(self.alpha) / self.J
 
 
 class PhaseSpace:
@@ -153,11 +173,11 @@ class PhaseSpace:
                 spectrum=spectrum, idx=[1]), idx=[0]).transpose((2, 3, 0, 1)))
 
 
-def lower_hermite(n, arr, alpha=2.0):
-    return sp.eval_hermite(n, arr / alpha) * np.exp(-(arr / alpha) ** 2.0) / \
-           np.sqrt((2.0 ** n) * np.pi * (alpha ** 2.0) * np.math.factorial(n))
+def lower_hermite(n, arr):
+    return sp.eval_hermite(n, arr) * np.exp(-arr ** 2.0) / \
+           np.sqrt((2.0 ** n) * np.pi * np.math.factorial(n))
 
 
-def upper_hermite(n, arr, alpha=2.0):
-    return sp.eval_hermite(n, arr / alpha) / np.sqrt((2.0 ** n) * np.math.factorial(n))
+def upper_hermite(n, arr):
+    return sp.eval_hermite(n, arr) / np.sqrt((2.0 ** n) * np.math.factorial(n))
     # *np.exp(-(arr/alpha)**2.0/2.0)

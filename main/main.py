@@ -11,13 +11,13 @@ import plotter as my_plt
 import matplotlib.pyplot as plt
 
 # elements and order
-elements, orders = [32, 128], [10, 10]
-final_time, write_time = 4.5 * np.pi, 1.0e-1
-alpha = 1.5
+elements, orders = [16, 64], [10, 10]
+final_time, write_time = 10.0, 5.0e-2
+alpha = 1.0  # np.sqrt(2.0)
 
 # Set up phase space grid
-lows = np.array([-4.0 * np.pi, -20.0])
-highs = np.array([4.0 * np.pi, 20.0])
+lows = np.array([-2.0 * np.pi, -12.0])
+highs = np.array([2.0 * np.pi, 12.0])
 grid = g.PhaseSpace(lows=lows, highs=highs, elements=elements, orders=orders, alpha=alpha)
 
 # Build distribution, elliptic, etc.
@@ -25,8 +25,6 @@ distribution = var.PhaseSpaceScalar(resolutions=elements, orders=orders)
 distribution.initialize(grid=grid)
 distribution.fourier_hermite_transform(grid=grid)
 distribution.invert_fourier_hermite_transform(grid=grid)
-distribution.zero_moment_spectral(grid=grid)
-#
 # Look at Fourier-Hermite spectrum
 plt.figure()
 for i in range(distribution.arr_spectral.shape[0]):
@@ -38,6 +36,26 @@ for i in range(distribution.arr_spectral.shape[0]):
     plt.plot(grid.v.modes, np.real(distribution.arr_spectral[i, :].get()), 'o')
 plt.title('real')
 plt.show()
+
+# Re-basis
+distribution.recompute_hermite_basis(grid=grid)
+
+# Look at Fourier-Hermite spectrum
+distribution.fourier_hermite_transform(grid=grid)
+distribution.invert_fourier_hermite_transform(grid=grid)
+plt.figure()
+for i in range(distribution.arr_spectral.shape[0]):
+    plt.plot(grid.v.modes, np.imag(distribution.arr_spectral[i, :].get()), 'o')
+plt.title('imag')
+
+plt.figure()
+for i in range(distribution.arr_spectral.shape[0]):
+    plt.plot(grid.v.modes, np.real(distribution.arr_spectral[i, :].get()), 'o')
+plt.title('real')
+plt.show()
+
+distribution.zero_moment_spectral(grid=grid)
+
 
 # Set up elliptic solver
 elliptic = ell.Elliptic(elements=elements, orders=orders)

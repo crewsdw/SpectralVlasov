@@ -48,17 +48,15 @@ class Plotter:
         cb_r = cp.linspace(cp.amin(real_spectrum), cp.amax(real_spectrum), num=100).get()
         cb_i = cp.linspace(cp.amin(imag_spectrum), cp.amax(imag_spectrum), num=100).get()
 
-        plt.figure()
-        plt.contourf(self.F, self.H, real_spectrum, cb_r)
-        plt.xlabel('Fourier modes'), plt.ylabel('Hermite modes')
-        plt.title('Real part of Fourier-Hermite spectrum')
-        plt.colorbar(), plt.tight_layout()
-
-        plt.figure()
-        plt.contourf(self.F, self.H, imag_spectrum, cb_i)
-        plt.xlabel('Fourier modes'), plt.ylabel('Hermite modes')
-        plt.title('Imaginary part of Fourier-Hermite spectrum')
-        plt.colorbar(), plt.tight_layout()
+        fig, ax = plt.subplots(1, 2, figsize=(14, 6), sharex=True, sharey=True)
+        c1 = ax[0].contourf(self.F, self.H, real_spectrum, cb_r)
+        c2 = ax[1].contourf(self.F, self.H, imag_spectrum, cb_i)
+        ax[0].set_title('Real spectrum')
+        ax[1].set_title('Imaginary spectrum')
+        plt.colorbar(c1, ax=ax[0]), plt.colorbar(c2, ax=ax[1])
+        plt.setp(ax[0], xlabel='Fourier modes'), plt.setp(ax[1], xlabel='Fourier modes')
+        plt.setp(ax[0], ylabel='Hermite modes')
+        plt.tight_layout()
 
     def show_all(self):
         plt.show()
