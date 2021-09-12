@@ -34,7 +34,7 @@ class Stepper:
 
         # Simulation time init
         self.time = 0
-        self.dt = 1.0e-3  # None
+        self.dt = 5.0e-3  # None
         self.steps_counter = 0
         self.write_counter = 1  # IC already written
 

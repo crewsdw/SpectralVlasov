@@ -30,12 +30,13 @@ class PhaseSpaceScalar:
         self.zero_moment = Scalar1D(resolution=resolutions[0], order=orders[0])
 
     def initialize(self, grid):
+        a = 0.5 * np.sqrt(2.0)
         ix, iv = cp.ones_like(grid.x.device_arr), cp.ones_like(grid.v.device_arr)
         pert = 1.0 + 0.1 * cp.sin(grid.x.fundamental * grid.x.device_arr)
-        factor = 1.0 / (np.sqrt(np.pi)) * cp.tensordot(pert, iv, axes=0)
-        vsq1 = cp.tensordot(ix, cp.power((grid.v.device_arr-2.0), 2.0), axes=0)
-        vsq2 = cp.tensordot(ix, cp.power((grid.v.device_arr+2.0), 2.0), axes=0)
-        gauss = 0.5 * cp.exp(-vsq1) + 0.5 * cp.exp(-vsq2)
+        factor = 1.0 / (np.sqrt(a ** 2.0 * np.pi)) * cp.tensordot(pert, iv, axes=0)
+        vsq1 = cp.tensordot(ix, cp.power((grid.v.device_arr-3.5), 2.0), axes=0)
+        vsq2 = cp.tensordot(ix, cp.power((grid.v.device_arr+3.5), 2.0), axes=0)
+        gauss = 0.5 * cp.exp(-vsq1/a**2.0) + 0.5 * cp.exp(-vsq2/a**2.0)
         self.arr_nodal = cp.multiply(factor, gauss)  # + perturbation
 
     def zero_moment_spectral(self, grid):

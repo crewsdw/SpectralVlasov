@@ -4,8 +4,9 @@ import matplotlib.pyplot as plt
 
 
 class Spectral:
-    def __init__(self):
+    def __init__(self, alpha):
         self.rhs = None
+        self.alpha = alpha
 
     def spectral_rhs(self, distribution, grid, elliptic):
         """ Computes the spectral right-hand side of Vlasov equation """
@@ -19,9 +20,17 @@ class Spectral:
         )
         elliptic.compute_field(grid=grid)
         # Transform back to fourier-hermite modes
-        edfdv = cp.multiply(elliptic.field.arr_nodal[:, :, None, None], df_dv)
         v_translation = grid.fourier_hermite_transform(
-            function=edfdv
+            function=cp.multiply(elliptic.field.arr_nodal[:, :, None, None], df_dv)
         )
+        #
+        # plotter = my_plt.Plotter(grid=grid)
+        # plt.figure()
+        # cb = cp.linspace(cp.amin(df_dv), cp.amax(df_dv), num=100).get()
+        # plt.contourf(plotter.X, plotter.V, df_dv.get().reshape(plotter.X.shape[0], plotter.V.shape[1]), cb)
+        # plt.colorbar(), plt.tight_layout
+        # plt.show(block=False)
+        # plt.pause(0.5)
+        # plt.close()
 
-        self.rhs = x_translation + 2.0 * v_translation
+        self.rhs = self.alpha * x_translation + v_translation / self.alpha

@@ -31,7 +31,7 @@ class SpaceGrid:
 
         # spectral properties
         self.transform_matrix = None
-        self.cutoff = 10  # self.elements + 1
+        self.cutoff = 30  # self.elements + 1
         self.fundamental = 2.0 * np.pi / self.length
         self.wavenumbers = self.fundamental * np.arange(1 - self.cutoff, self.cutoff)
         self.device_wavenumbers = cp.asarray(self.wavenumbers)
@@ -69,7 +69,7 @@ class SpaceGrid:
 
 
 class VelocityGrid:
-    def __init__(self, low, high, elements, order):
+    def __init__(self, low, high, elements, order, alpha=2.0):
         # grid limits and elements
         self.low, self.high = low, high
         self.elements = elements
@@ -94,14 +94,14 @@ class VelocityGrid:
 
         # spectral properties
         self.transform_matrix = None
-        self.cutoff = 150  # 4 * elements + 1
+        self.cutoff = 90  # 4 * elements + 1
         self.modes = np.arange(self.cutoff)
         self.device_modes = cp.asarray(self.modes)
         self.upper_grid_modes = cp.asarray(
-            np.array([upper_hermite(n, self.arr) for n in range(self.cutoff)])
+            np.array([upper_hermite(n, self.arr, alpha=alpha) for n in range(self.cutoff)])
         )
         self.lower_grid_modes = cp.asarray(
-            np.array([lower_hermite(n, self.arr) for n in range(self.cutoff)])
+            np.array([lower_hermite(n, self.arr, alpha=alpha) for n in range(self.cutoff)])
         )
         self.build_transform_matrix()
         # plt.figure()
@@ -137,9 +137,9 @@ class VelocityGrid:
 
 
 class PhaseSpace:
-    def __init__(self, lows, highs, elements, orders):
+    def __init__(self, lows, highs, elements, orders, alpha):
         self.x = SpaceGrid(low=lows[0], high=highs[0], elements=elements[0], order=orders[0])
-        self.v = VelocityGrid(low=lows[1], high=highs[1], elements=elements[1], order=orders[1])
+        self.v = VelocityGrid(low=lows[1], high=highs[1], elements=elements[1], order=orders[1], alpha=alpha)
 
     def fourier_hermite_transform(self, function):
         """ Returns Fourier-Hermite coefficients as (Fourier, Hermite) """
@@ -153,10 +153,11 @@ class PhaseSpace:
                 spectrum=spectrum, idx=[1]), idx=[0]).transpose((2, 3, 0, 1)))
 
 
-def lower_hermite(n, arr):
-    return sp.hermite(n, monic=False)(arr) * np.exp(-arr ** 2.0) / \
-           np.sqrt((2.0 ** n) * np.pi * np.math.factorial(n))
+def lower_hermite(n, arr, alpha=2.0):
+    return sp.eval_hermite(n, arr / alpha) * np.exp(-(arr / alpha) ** 2.0) / \
+           np.sqrt((2.0 ** n) * np.pi * (alpha ** 2.0) * np.math.factorial(n))
 
 
-def upper_hermite(n, arr):
-    return sp.hermite(n, monic=False)(arr) / np.sqrt((2.0 ** n) * np.math.factorial(n))
+def upper_hermite(n, arr, alpha=2.0):
+    return sp.eval_hermite(n, arr / alpha) / np.sqrt((2.0 ** n) * np.math.factorial(n))
+    # *np.exp(-(arr/alpha)**2.0/2.0)
