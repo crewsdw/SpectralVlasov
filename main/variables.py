@@ -74,11 +74,11 @@ class PhaseSpaceScalar:
         #                    cp.roll(self.padded_spectrum, shift=-1, axis=1)[:, 1:-1])
 
     def spectral_lenard_bernstein(self, grid):
-        nu = 7.5e-1
+        nu = 2.0e1
         return -1.0 * nu * (
                 cp.multiply((grid.v.device_modes * (grid.v.device_modes - 1) * (grid.v.device_modes - 2))[None, :],
                             self.arr_spectral) /
-                ((grid.v.cutoff - 1) * (grid.v.cutoff - 2) * (grid.v.cutoff - 3))
+                (grid.v.cutoff * (grid.v.cutoff - 1) * (grid.v.cutoff - 2))
         )
 
     def grid_flatten(self):

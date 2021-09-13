@@ -12,12 +12,13 @@ import matplotlib.pyplot as plt
 
 # elements and order
 elements, orders = [32, 64], [10, 10]
-final_time, write_time = 25.0, 1.0e-1
-alpha = 1.0  # np.sqrt(2.0)
+final_time, write_time = 40.0, 5.0e-1
+alpha = 2.0 / np.sqrt(2.0)
+method = 'spectral'
 
 # Set up phase space grid
-lows = np.array([-2.0 * np.pi, -10.0])
-highs = np.array([2.0 * np.pi, 10.0])
+lows = np.array([-4.0 * np.pi, -8.0])
+highs = np.array([4.0 * np.pi, 8.0])
 grid = g.PhaseSpace(lows=lows, highs=highs, elements=elements, orders=orders, alpha=alpha)
 
 # Build distribution, elliptic, etc.
@@ -73,9 +74,10 @@ plotter.show_all()
 semi_discrete = sd.Spectral(alpha=alpha)
 
 # Set up time-stepper
-stepper = ts.Stepper(time_order=3, space_order=orders[0], write_time=write_time, final_time=final_time)
-stepper.main_loop(distribution=distribution, grid=grid, elliptic=elliptic, semi_discrete=semi_discrete)
-
+stepper = ts.Stepper(time_order=3, space_order=orders[0],
+                     write_time=write_time, final_time=final_time, method=method)
+stepper.main_loop(distribution=distribution, grid=grid,
+                  elliptic=elliptic, semi_discrete=semi_discrete)
 
 # Look at Fourier-Hermite spectrum
 plt.figure()
@@ -97,7 +99,8 @@ elliptic.potential.inverse_fourier_transform(grid=grid)
 plotter.phasespace_scalar_contourf(ps_scalar=distribution)
 plotter.spatial_scalar_plot(scalar=distribution.zero_moment, y_axis='n')
 plotter.spatial_scalar_plot(scalar=elliptic.potential, y_axis='phi')
-plotter.plot_saved_scalars(saved_array=stepper.saved_array)
+# plotter.plot_saved_scalars(saved_array=stepper.saved_array)
+plotter.animate_phase_space_scalar(stepper=stepper)
 plotter.plot_fourier_hermite_spectrum(ps_scalar=distribution)
 
 plotter.show_all()

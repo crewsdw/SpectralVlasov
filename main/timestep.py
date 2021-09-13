@@ -3,7 +3,6 @@ import numpy as np
 import variables as var
 import time as timer
 
-
 # Courant numbers for RK-DG stability from Cockburn and Shu 2001, [time_order][space_order-1]
 courant_numbers = {
     1: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
@@ -24,17 +23,18 @@ nonlinear_ssp_rk_switch = {
 
 
 class Stepper:
-    def __init__(self, time_order, space_order, write_time, final_time):
+    def __init__(self, time_order, space_order, write_time, final_time, method='spectral'):
         # Parameters
         self.time_order, self.space_order = time_order, space_order
         self.write_time, self.final_time = write_time, final_time
         # RK numbers
         self.rk_coefficients = np.array(nonlinear_ssp_rk_switch.get(self.time_order, "nothing"))
         # self.courant = courant_numbers.get(self.time_order)[self.space_order - 1]
+        self.method = method
 
         # Simulation time init
         self.time = 0
-        self.dt = 5.0e-3  # None
+        self.dt = 1.0e-2  # None
         self.steps_counter = 0
         self.write_counter = 1  # IC already written
 
@@ -46,11 +46,15 @@ class Stepper:
         t0 = timer.time()
         print('\nBeginning main loop')
         self.saved_times += [self.time]
-        self.saved_array += [distribution.zero_moment.arr_nodal]
+        self.saved_array += [distribution.arr_nodal]
         while self.time < self.final_time:
             # Take step
-            self.nonlinear_ssp_rk(distribution=distribution, grid=grid, elliptic=elliptic,
-                                  semi_discrete=semi_discrete)
+            # if self.method == 'spectral':
+            self.spectral_rk(distribution=distribution, grid=grid, elliptic=elliptic,
+                             semi_discrete=semi_discrete)
+            # if self.method == 'nodal':
+            # self.nodal_rk(distribution=distribution, grid=grid, elliptic=elliptic,
+            #               semi_discrete=semi_discrete)
             # Update basis
             distribution.invert_fourier_hermite_transform(grid=grid)
             distribution.recompute_hermite_basis(grid=grid)
@@ -63,14 +67,43 @@ class Stepper:
                 self.write_counter += 1
                 distribution.zero_moment.inverse_fourier_transform(grid=grid)
                 self.saved_times += [self.time]
-                self.saved_array += [distribution.zero_moment.arr_nodal]
+                self.saved_array += [distribution.arr_nodal]
                 print(grid.v.alpha)
                 print('The simulation time is {:0.3e}'.format(self.time))
                 print('The time-step is {:0.3e}'.format(self.dt))
                 print('Time since start is ' + str((timer.time() - t0) / 60.0) + ' minutes')
         print('\nAll done, total steps was ' + str(self.steps_counter))
 
-    def nonlinear_ssp_rk(self, distribution, grid, elliptic, semi_discrete):
+    def nodal_rk(self, distribution, grid, elliptic, semi_discrete):
+        # Set up stages
+        stage0 = var.PhaseSpaceScalar(resolutions=[grid.x.elements, grid.v.elements],
+                                      orders=[grid.x.order, grid.v.order])
+        stage1 = var.PhaseSpaceScalar(resolutions=[grid.x.elements, grid.v.elements],
+                                      orders=[grid.x.order, grid.v.order])
+
+        # zero stage
+        elliptic.poisson_solve(distribution=distribution, grid=grid, invert=False)
+        semi_discrete.nodal_rhs(distribution=distribution,
+                                grid=grid, elliptic=elliptic)
+        stage0.arr_nodal = distribution.arr_nodal + self.dt * semi_discrete.rhs
+
+        # first stage
+        elliptic.poisson_solve(distribution=stage0, grid=grid, invert=False)
+        semi_discrete.nodal_rhs(distribution=stage0,
+                                grid=grid, elliptic=elliptic)
+        stage1.arr_nodal = (self.rk_coefficients[0, 0] * distribution.arr_nodal +
+                            self.rk_coefficients[0, 1] * stage0.arr_nodal +
+                            self.rk_coefficients[0, 2] * self.dt * semi_discrete.rhs)
+
+        # second stage, update
+        elliptic.poisson_solve(distribution=stage1, grid=grid, invert=False)
+        semi_discrete.nodal_rhs(distribution=stage1,
+                                grid=grid, elliptic=elliptic)
+        distribution.arr_nodal = (self.rk_coefficients[1, 0] * distribution.arr_nodal +
+                                  self.rk_coefficients[1, 1] * stage1.arr_nodal +
+                                  self.rk_coefficients[1, 2] * self.dt * semi_discrete.rhs)
+
+    def spectral_rk(self, distribution, grid, elliptic, semi_discrete):
         # Set up stages
         stage0 = var.PhaseSpaceScalar(resolutions=[grid.x.elements, grid.v.elements],
                                       orders=[grid.x.order, grid.v.order])

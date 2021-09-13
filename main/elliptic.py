@@ -22,11 +22,11 @@ class Elliptic:
         if invert:
             self.potential.inverse_fourier_transform(grid=grid)
 
-    def compute_field(self, grid):
+    def compute_field(self, grid, nodal=True):
         # Compute electric field
-        self.field.arr_nodal = cp.real(grid.x.inverse_fourier_transform(
-            spectrum=cp.multiply(-1j * grid.x.device_wavenumbers, self.potential.arr_spectral),
-            idx=[0]
-        ))
-        # print(self.field.arr_nodal.shape)
-        # quit()
+        self.field.arr_spectral = cp.multiply(-1j * grid.x.device_wavenumbers, self.potential.arr_spectral)
+        if nodal:
+            self.field.arr_nodal = cp.real(grid.x.inverse_fourier_transform(
+                spectrum=self.field.arr_spectral,
+                idx=[0]
+            ))

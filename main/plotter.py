@@ -1,7 +1,8 @@
 import cupy as cp
 import numpy as np
 import matplotlib.pyplot as plt
-# import matplotlib.animation as animation
+import matplotlib.animation as animation
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
 class Plotter:
@@ -57,6 +58,24 @@ class Plotter:
         plt.setp(ax[0], xlabel='Fourier modes'), plt.setp(ax[1], xlabel='Fourier modes')
         plt.setp(ax[0], ylabel='Hermite modes')
         plt.tight_layout()
+
+    def animate_phase_space_scalar(self, stepper):
+        fig, ax = plt.subplots()  # subplots(1, 2, figsize=(16, 8), constrained_layout=True)
+        div = make_axes_locatable(ax)
+        cax = div.append_axes('right', '5%', '5%')
+
+        def animate_frame(idx):
+            ax.collections, ax.patches = [], []
+            # plot phase space scalar
+            cb = cp.linspace(cp.amin(stepper.saved_array[idx]), cp.amax(stepper.saved_array[idx]), num=100).get()
+            cf = ax.contourf(self.X, self.V, stepper.saved_array[idx].get().reshape(self.X.shape),
+                             cb, cmap=self.colormap)
+            cax.cla()
+            fig.colorbar(cf, cax=cax)
+            fig.suptitle('Time t={:0.3f}'.format(stepper.saved_times[idx]))
+
+        anim = animation.FuncAnimation(fig, animate_frame, frames=len(stepper.saved_array))
+        anim.save(filename='..\\movies\\animation.mp4')
 
     def show_all(self):
         plt.show()

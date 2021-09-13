@@ -2,7 +2,7 @@ import numpy as np
 import cupy as cp
 import basis as b
 import scipy.special as sp
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 
 class SpaceGrid:
@@ -31,7 +31,7 @@ class SpaceGrid:
 
         # spectral properties
         self.transform_matrix = None
-        self.cutoff = 50  # self.elements + 1
+        self.cutoff = 25  # self.elements + 1
         self.fundamental = 2.0 * np.pi / self.length
         self.wavenumbers = self.fundamental * np.arange(1 - self.cutoff, self.cutoff)
         self.device_wavenumbers = cp.asarray(self.wavenumbers)
@@ -92,7 +92,7 @@ class VelocityGrid:
 
         # spectral properties
         self.transform_matrix = None
-        self.cutoff = 100  # 4 * elements + 1
+        self.cutoff = 125  # 4 * elements + 1
         self.modes = np.arange(self.cutoff)
         self.device_modes = cp.asarray(self.modes)
         # compute initial grid modes
@@ -138,7 +138,7 @@ class VelocityGrid:
 
     def compute_hermite_basis(self, first_moment, centered_second_moment):
         """ Calculate the hermite basis again using the shifted/scaled variable z = (v - <v>)/alpha """
-        self.alpha = centered_second_moment * np.sqrt(2.0)
+        self.alpha = centered_second_moment / np.sqrt(2.0)  # * np.sqrt(2.0)
         # print(centered_second_moment)
         self.upper_grid_modes = cp.asarray(
             np.array([upper_hermite(n, self.arr / self.alpha) for n in range(self.cutoff)])
