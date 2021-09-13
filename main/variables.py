@@ -36,16 +36,16 @@ class PhaseSpaceScalar:
         ix, iv = cp.ones_like(grid.x.device_arr), cp.ones_like(grid.v.device_arr)
         pert = 1.0 + 0.1 * cp.sin(grid.x.fundamental * grid.x.device_arr)
         factor = 1.0 / (np.sqrt(a ** 2.0 * np.pi)) * cp.tensordot(pert, iv, axes=0)
-        vsq1 = cp.tensordot(ix, cp.power((grid.v.device_arr-2.0), 2.0), axes=0)
-        vsq2 = cp.tensordot(ix, cp.power((grid.v.device_arr+2.0), 2.0), axes=0)
-        gauss = 0.5 * cp.exp(-vsq1 / a ** 2.0) + 0.5 * cp.exp(- vsq2 / a**2.0)
+        vsq1 = cp.tensordot(ix, cp.power((grid.v.device_arr - 2.0), 2.0), axes=0)
+        vsq2 = cp.tensordot(ix, cp.power((grid.v.device_arr + 2.0), 2.0), axes=0)
+        gauss = 0.5 * cp.exp(-vsq1 / a ** 2.0) + 0.5 * cp.exp(- vsq2 / a ** 2.0)
         self.arr_nodal = cp.multiply(factor, gauss)  # + perturbation
 
     def zero_moment_spectral(self, grid):
         """ Fourier modes of zero-moment are the zero Hermite modes """
         if self.arr_spectral is None:
             self.fourier_hermite_transform(grid=grid)
-        self.zero_moment.arr_spectral = self.arr_spectral[:, 0] * grid.v.alpha
+        self.zero_moment.arr_spectral = self.arr_spectral[:, 0] * cp.array(grid.v.alpha)
 
     def fourier_hermite_transform(self, grid):
         """
@@ -73,6 +73,14 @@ class PhaseSpaceScalar:
         # return cp.multiply(cp.sqrt(2.0 * (grid.v.device_modes+1))[None, :],
         #                    cp.roll(self.padded_spectrum, shift=-1, axis=1)[:, 1:-1])
 
+    def spectral_lenard_bernstein(self, grid):
+        nu = 7.5e-1
+        return -1.0 * nu * (
+                cp.multiply((grid.v.device_modes * (grid.v.device_modes - 1) * (grid.v.device_modes - 2))[None, :],
+                            self.arr_spectral) /
+                ((grid.v.cutoff - 1) * (grid.v.cutoff - 2) * (grid.v.cutoff - 3))
+        )
+
     def grid_flatten(self):
         return self.arr_nodal.reshape((self.x_res * self.x_ord,
                                        self.v_res * self.v_ord))
@@ -91,11 +99,17 @@ class PhaseSpaceScalar:
                                                 self.zero_moment.arr_nodal)
 
     def compute_centered_second_moment(self, grid):
+        # self.centered_second_moment.arr_nodal = cp.sqrt(
+        #     cp.divide(grid.v.shifted_second_moment(function=self.arr_nodal,
+        #                                            shift=0.0 * cp.mean(self.first_moment.arr_nodal),
+        #                                            idx=[2, 3]),
+        #               self.zero_moment.arr_nodal)
+        # )
         self.centered_second_moment.arr_nodal = cp.sqrt(
-            cp.divide(grid.v.shifted_second_moment(function=self.arr_nodal,
-                                                   shift=0.0 * cp.mean(self.first_moment.arr_nodal),
-                                                   idx=[2, 3]),
-                      self.zero_moment.arr_nodal)
+            grid.v.shifted_second_moment(function=cp.mean(self.arr_nodal.reshape(self.x_res * self.x_ord,
+                                                                                 self.v_res, self.v_ord), axis=0),
+                                         shift=0.0,  # * cp.mean(self.first_moment.arr_nodal),
+                                         idx=[0, 1])
         )
 
     def recompute_hermite_basis(self, grid):
@@ -103,11 +117,11 @@ class PhaseSpaceScalar:
         if self.arr_spectral is not None:
             self.invert_fourier_hermite_transform(grid=grid)
         self.compute_zero_moment(grid=grid)
-        self.compute_first_moment(grid=grid)
+        # self.compute_first_moment(grid=grid)
         self.compute_centered_second_moment(grid=grid)
         # print(cp.mean(self.zero_moment.arr_nodal))
         # print(cp.mean(self.first_moment.arr_nodal))
         # print(cp.mean(self.centered_second_moment.arr_nodal))
         # print(cp.mean(cp.sqrt(2) * self.centered_second_moment.arr_nodal).get())
-        grid.v.compute_hermite_basis(first_moment=0 * cp.mean(self.first_moment.arr_nodal).get(),
+        grid.v.compute_hermite_basis(first_moment=0,  # * cp.mean(self.first_moment.arr_nodal).get(),
                                      centered_second_moment=cp.mean(self.centered_second_moment.arr_nodal).get())

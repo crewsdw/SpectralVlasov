@@ -32,5 +32,7 @@ class Spectral:
         # plt.show(block=False)
         # plt.pause(0.5)
         # plt.close()
+        # Collision, Lenard-Bernstein
+        collision = distribution.spectral_lenard_bernstein(grid=grid)
 
-        self.rhs = self.alpha * x_translation + v_translation / self.alpha
+        self.rhs = self.alpha * x_translation + v_translation / self.alpha + collision

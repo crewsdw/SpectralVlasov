@@ -11,13 +11,13 @@ import plotter as my_plt
 import matplotlib.pyplot as plt
 
 # elements and order
-elements, orders = [16, 64], [10, 10]
-final_time, write_time = 10.0, 5.0e-2
+elements, orders = [32, 64], [10, 10]
+final_time, write_time = 25.0, 1.0e-1
 alpha = 1.0  # np.sqrt(2.0)
 
 # Set up phase space grid
-lows = np.array([-2.0 * np.pi, -12.0])
-highs = np.array([2.0 * np.pi, 12.0])
+lows = np.array([-2.0 * np.pi, -10.0])
+highs = np.array([2.0 * np.pi, 10.0])
 grid = g.PhaseSpace(lows=lows, highs=highs, elements=elements, orders=orders, alpha=alpha)
 
 # Build distribution, elliptic, etc.

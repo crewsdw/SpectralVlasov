@@ -31,7 +31,7 @@ class SpaceGrid:
 
         # spectral properties
         self.transform_matrix = None
-        self.cutoff = 15  # self.elements + 1
+        self.cutoff = 50  # self.elements + 1
         self.fundamental = 2.0 * np.pi / self.length
         self.wavenumbers = self.fundamental * np.arange(1 - self.cutoff, self.cutoff)
         self.device_wavenumbers = cp.asarray(self.wavenumbers)
@@ -138,7 +138,7 @@ class VelocityGrid:
 
     def compute_hermite_basis(self, first_moment, centered_second_moment):
         """ Calculate the hermite basis again using the shifted/scaled variable z = (v - <v>)/alpha """
-        self.alpha = np.sqrt(2.0) * centered_second_moment
+        self.alpha = centered_second_moment * np.sqrt(2.0)
         # print(centered_second_moment)
         self.upper_grid_modes = cp.asarray(
             np.array([upper_hermite(n, self.arr / self.alpha) for n in range(self.cutoff)])
@@ -153,7 +153,7 @@ class VelocityGrid:
         self.transform_matrix = cp.multiply(
             self.local_basis.device_weights[None, None, :],
             self.upper_grid_modes
-        ) / cp.array(self.alpha) / self.J
+        ) / self.J / cp.array(self.alpha)
 
 
 class PhaseSpace:
