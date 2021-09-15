@@ -2,6 +2,8 @@ import numpy as np
 import cupy as cp
 import basis as b
 import scipy.special as sp
+
+
 # import matplotlib.pyplot as plt
 
 
@@ -92,7 +94,7 @@ class VelocityGrid:
 
         # spectral properties
         self.transform_matrix = None
-        self.cutoff = 125  # 4 * elements + 1
+        self.cutoff = 75  # 4 * elements + 1
         self.modes = np.arange(self.cutoff)
         self.device_modes = cp.asarray(self.modes)
         # compute initial grid modes
@@ -155,6 +157,14 @@ class VelocityGrid:
             self.upper_grid_modes
         ) / self.J / cp.array(self.alpha)
 
+    def compute_maxwellian(self, thermal_velocity, drift_velocity):
+        return cp.exp(-((self.device_arr - drift_velocity) /
+                        thermal_velocity) ** 2.0) / (cp.sqrt(cp.pi) * thermal_velocity)
+
+    def compute_maxwellian_gradient(self, thermal_velocity, drift_velocity):
+        return (-2.0 * ((self.device_arr - drift_velocity) / thermal_velocity ** 2.0) *
+                self.compute_maxwellian(thermal_velocity=thermal_velocity, drift_velocity=drift_velocity))
+
 
 class PhaseSpace:
     def __init__(self, lows, highs, elements, orders, alpha):
@@ -171,6 +181,16 @@ class PhaseSpace:
         return cp.real(self.x.inverse_fourier_transform(
             spectrum=self.v.inverse_hermite_transform(
                 spectrum=spectrum, idx=[1]), idx=[0]).transpose((2, 3, 0, 1)))
+
+    def eigenfunction(self, thermal_velocity, drift_velocity, eigenvalue, beams='two-stream'):
+        if beams == 'two-stream':
+            df1 = self.v.compute_maxwellian_gradient(thermal_velocity=thermal_velocity,
+                                                     drift_velocity=drift_velocity)
+            df2 = self.v.compute_maxwellian_gradient(thermal_velocity=thermal_velocity,
+                                                     drift_velocity=drift_velocity)
+            df = df1 + df2
+            v_part = cp.divide(df, (self.v.device_arr - eigenvalue))
+            return cp.real(1j * np.tensordot(np.exp(1j * self.x.fundamental * self.x.device_arr), v_part, axes=0))
 
 
 def lower_hermite(n, arr):

@@ -43,9 +43,9 @@ df1, df2 = grad_max(u1), grad_max(u2)
 df = 0.5 * (df1 + df2)
 
 
-def eigenfunction(z):
+def eigenfunction(eig_here):
     """ Compute eigenfunction with z as the eigenvalue """
-    v_part = np.divide(df, (v - z))
+    v_part = np.divide(df, (v - eig_here))
     return np.real(1j * np.tensordot(np.exp(1j * k * x), v_part, axes=0))
 
 

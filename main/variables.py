@@ -34,12 +34,21 @@ class PhaseSpaceScalar:
     def initialize(self, grid):
         a = 1.0  # / np.sqrt(2.0)
         ix, iv = cp.ones_like(grid.x.device_arr), cp.ones_like(grid.v.device_arr)
-        pert = 1.0 + 0.1 * cp.sin(grid.x.fundamental * grid.x.device_arr)
-        factor = 1.0 / (np.sqrt(a ** 2.0 * np.pi)) * cp.tensordot(pert, iv, axes=0)
-        vsq1 = cp.tensordot(ix, cp.power((grid.v.device_arr - 2.0), 2.0), axes=0)
-        vsq2 = cp.tensordot(ix, cp.power((grid.v.device_arr + 2.0), 2.0), axes=0)
-        gauss = 0.5 * cp.exp(-vsq1 / a ** 2.0) + 0.5 * cp.exp(- vsq2 / a ** 2.0)
-        self.arr_nodal = cp.multiply(factor, gauss)  # + perturbation
+        # Compute maxwellians
+        maxwellian1 = cp.tensordot(ix, grid.v.compute_maxwellian(thermal_velocity=a,
+                                                                 drift_velocity=-2.0), axes=0)
+        maxwellian2 = cp.tensordot(ix, grid.v.compute_maxwellian(thermal_velocity=a,
+                                                                 drift_velocity=+2.0), axes=0)
+        maxwellian = 0.5 * (maxwellian1 + maxwellian2)
+        # Compute perturbations
+        perturbation = 0.5 * (grid.eigenfunction(thermal_velocity=a,
+                                                 drift_velocity=-2.0,
+                                                 eigenvalue=3.0j) +
+                              grid.eigenfunction(thermal_velocity=a,
+                                                 drift_velocity=+2.0,
+                                                 eigenvalue=3.0j))
+        # gauss = 0.5 * cp.exp(-vsq1 / a ** 2.0) + 0.5 * cp.exp(- vsq2 / a ** 2.0)
+        self.arr_nodal = maxwellian + perturbation
 
     def zero_moment_spectral(self, grid):
         """ Fourier modes of zero-moment are the zero Hermite modes """
@@ -74,12 +83,13 @@ class PhaseSpaceScalar:
         #                    cp.roll(self.padded_spectrum, shift=-1, axis=1)[:, 1:-1])
 
     def spectral_lenard_bernstein(self, grid):
-        nu = 2.0e1
-        return -1.0 * nu * (
-                cp.multiply((grid.v.device_modes * (grid.v.device_modes - 1) * (grid.v.device_modes - 2))[None, :],
-                            self.arr_spectral) /
-                (grid.v.cutoff * (grid.v.cutoff - 1) * (grid.v.cutoff - 2))
-        )
+        nu = 1.0e1
+        return -1.0 * nu * grid.v.device_modes[None, :] * self.arr_spectral
+        # return -1.0 * nu * (
+        #         cp.multiply((grid.v.device_modes * (grid.v.device_modes - 1) * (grid.v.device_modes - 2))[None, :],
+        #                     self.arr_spectral) /
+        #         (grid.v.cutoff * (grid.v.cutoff - 1) * (grid.v.cutoff - 2))
+        # )
 
     def grid_flatten(self):
         return self.arr_nodal.reshape((self.x_res * self.x_ord,
