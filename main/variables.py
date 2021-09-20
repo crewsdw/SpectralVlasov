@@ -48,7 +48,7 @@ class PhaseSpaceScalar:
                                                  drift_velocity=+2.0,
                                                  eigenvalue=3.0j))
         # gauss = 0.5 * cp.exp(-vsq1 / a ** 2.0) + 0.5 * cp.exp(- vsq2 / a ** 2.0)
-        self.arr_nodal = maxwellian + perturbation
+        self.arr_nodal = maxwellian + 0.1 * perturbation
 
     def zero_moment_spectral(self, grid):
         """ Fourier modes of zero-moment are the zero Hermite modes """
@@ -75,6 +75,14 @@ class PhaseSpaceScalar:
                             cp.roll(self.padded_spectrum, shift=+1, axis=1)[:, 1:-1])
         )
 
+    # def hermite_derivative(self, grid):
+    #     """ Computes the term df/dv using symmetric Hermite recurrence """
+    #     return (
+    #             cp.multiply(cp.sqrt(0.5 * (grid.v.device_modes+1))[None, :],
+    #                        cp.roll(self.padded_spectrum, shift=+1, axis=1)[:, 1:-1]) -
+    #             cp.multiply(cp.sqrt(0.5 * (grid.v.device_modes))[None, :],
+    #                         cp.roll(self.padded_spectrum, shift=-1, axis=1)[:, 1:-1])
+    #     )
     def hermite_derivative(self, grid):
         """ Computes the term df/dv using Hermite recurrence """
         return cp.multiply(cp.sqrt(2.0 * grid.v.device_modes)[None, :],
@@ -83,13 +91,13 @@ class PhaseSpaceScalar:
         #                    cp.roll(self.padded_spectrum, shift=-1, axis=1)[:, 1:-1])
 
     def spectral_lenard_bernstein(self, grid):
-        nu = 1.0e1
-        return -1.0 * nu * grid.v.device_modes[None, :] * self.arr_spectral
-        # return -1.0 * nu * (
-        #         cp.multiply((grid.v.device_modes * (grid.v.device_modes - 1) * (grid.v.device_modes - 2))[None, :],
-        #                     self.arr_spectral) /
-        #         (grid.v.cutoff * (grid.v.cutoff - 1) * (grid.v.cutoff - 2))
-        # )
+        nu = 0.5e0
+        # return -1.0 * nu * grid.v.device_modes[None, :] * self.arr_spectral / grid.v.cutoff
+        return -1.0 * nu * (
+                cp.multiply((grid.v.device_modes * (grid.v.device_modes - 1) * (grid.v.device_modes - 2))[None, :],
+                            self.arr_spectral) /
+                (grid.v.cutoff * (grid.v.cutoff - 1) * (grid.v.cutoff - 2))
+        )
 
     def grid_flatten(self):
         return self.arr_nodal.reshape((self.x_res * self.x_ord,

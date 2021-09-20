@@ -1,7 +1,20 @@
 import cupy as cp
-# import cupyx.scipy.signal as cp_sig
+import cupyx.scipy.linalg as clg
 import plotter as my_plt
 import matplotlib.pyplot as plt
+
+
+class ImplicitSpectral:
+    def __init__(self, alpha):
+        self.rhs = None
+        self.alpha = alpha
+
+    def fourier_hermite_jacobian(self, variable, grid):
+        """ Computes the Jacobian of the spectral ODE """
+        # convolutional_term = cp.zeros_like(variable.arr_spectral)
+        convolutional_term = cp.array([clg.convolution_matrix(variable.arr_spectral[:, m-1],
+                                                              n=variable.arr_spectral.shape[0],
+                                                              mode='same')])
 
 
 class Spectral:

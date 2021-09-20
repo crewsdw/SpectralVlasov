@@ -94,7 +94,7 @@ class VelocityGrid:
 
         # spectral properties
         self.transform_matrix = None
-        self.cutoff = 75  # 4 * elements + 1
+        self.cutoff = 100  # 4 * elements + 1
         self.modes = np.arange(self.cutoff)
         self.device_modes = cp.asarray(self.modes)
         # compute initial grid modes
@@ -140,7 +140,7 @@ class VelocityGrid:
 
     def compute_hermite_basis(self, first_moment, centered_second_moment):
         """ Calculate the hermite basis again using the shifted/scaled variable z = (v - <v>)/alpha """
-        self.alpha = centered_second_moment / np.sqrt(2.0)  # * np.sqrt(2.0)
+        self.alpha = centered_second_moment / 2.0  # np.sqrt(2.0)  # * np.sqrt(2.0)
         # print(centered_second_moment)
         self.upper_grid_modes = cp.asarray(
             np.array([upper_hermite(n, self.arr / self.alpha) for n in range(self.cutoff)])
@@ -193,6 +193,13 @@ class PhaseSpace:
             return cp.real(1j * np.tensordot(np.exp(1j * self.x.fundamental * self.x.device_arr), v_part, axes=0))
 
 
+# Symmetrically-weighted Hermite function basis
+def lower_hermite_sym(n, arr):
+    return sp.eval_hermite(n, arr) * np.exp(-arr ** 2.0 / 2.0) / \
+           np.sqrt((2.0 ** n) * np.sqrt(np.pi) * np.math.factorial(n))
+
+
+# Asymmetrically-weighted Hermite function basis
 def lower_hermite(n, arr):
     return sp.eval_hermite(n, arr) * np.exp(-arr ** 2.0) / \
            np.sqrt((2.0 ** n) * np.pi * np.math.factorial(n))
